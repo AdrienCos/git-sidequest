@@ -1,15 +1,24 @@
+use std::any::Any;
+
 use clap::Parser;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
-    #[arg(short, long, help = "Name of the branch to create")]
+    #[arg(short, long, help = "Name of the branch to create", value_parser = validate_branch_name)]
     // TODO: Add a validator to ensure the branch name is valid
     branch: String,
     // TODO: Add '--no-verify' option
     // TODO: Add '-a/--add' option
     // TODO: Add '-m/--message' option
     // TODO: Add '-n/--dry-run' option
+}
+
+fn validate_branch_name(branch_name: &str) -> Result<String, String> {
+    match git2::Branch::name_is_valid(branch_name) {
+        Ok(true) => Ok(branch_name.to_string()),
+        _ => Err("Invalid branch name".to_string()),
+    }
 }
 
 fn main() {
