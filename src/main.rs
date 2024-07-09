@@ -114,26 +114,56 @@ fn main() {
 
     // Stash the unstaged changes
     if unstaged_changes {
-        let _ = repo.stash_save(
+        match repo.stash_save(
             &signature,
             "git-sidequest: stash unstaged changes",
             Some(git2::StashFlags::KEEP_INDEX),
-        );
+        ) {
+            Ok(_) => {
+                println!("Stashed unstaged changes");
+            }
+            Err(e) => {
+                eprintln!("Failed to stash unstaged changes: {e}");
+                return;
+            }
+        }
     }
 
     // Stash the staged changes
-    let _ = repo.stash_save(
+    match repo.stash_save(
         &signature,
         "git-sidequest: stash staged changes",
         Some(git2::StashFlags::DEFAULT),
-    );
+    ) {
+        Ok(_) => {
+            println!("Stashed unstaged changes");
+        }
+        Err(e) => {
+            eprintln!("Failed to stash unstaged changes: {e}");
+            return;
+        }
+    }
 
     // TODO: Checkout
     // repo.checkout_tree(&master_object, None);
     {
         let (object, reference) = repo.revparse_ext("master").expect("Object not found");
-        let _ = repo.checkout_tree(&object, None).unwrap();
-        let _ = repo.set_head(reference.unwrap().name().unwrap());
+        println!("{:?}", reference.unwrap().name());
+        if let Err(error) = repo.checkout_tree(&object, None) {
+            eprintln!("Failed to checkout master branch: {error}");
+            return;
+        }
+        println!("Checked out master branch");
+        // let refname = reference.map_or("", |reference| reference.name());
+        if let Err(error) = repo.set_head("refs/heads/master") {
+            eprint!("Failed to set HEAD to master branch: {error}");
+            return;
+        }
+        println!("Set HEAD to master branch");
+        // if let Error(error) = repo.set_head(reference.map(|ref: Reference| ref.name())) {
+        //     eprintln!("Failed to set HEAD to master branch: {error}");
+        //     return;
+        // }
     }
     // let _ = repo.checkout_head(None);
 
@@ -168,10 +198,10 @@ fn main() {
     if unstaged_changes {
         match repo.stash_pop(0, None) {
             Ok(()) => {
-                println!("Unstashed changes");
+                println!("Unstashed unstaged changes");
             }
             Err(e) => {
-                eprintln!("Failed to unstash changes: {e}");
+                eprintln!("Failed to unstash unstaged changes: {e}");
                 return;
             }
         }
