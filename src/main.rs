@@ -1,7 +1,5 @@
 #![warn(clippy::all, clippy::pedantic, clippy::style)]
 
-use std::any::Any;
-
 use clap::Parser;
 use git2::Repository;
 
@@ -25,6 +23,7 @@ fn validate_branch_name(branch_name: &str) -> Result<String, String> {
     }
 }
 
+#[allow(clippy::too_many_lines)]
 fn main() {
     let args = Args::parse();
 
@@ -37,40 +36,33 @@ fn main() {
             repo
         }
         Err(e) => {
-            eprintln!("Failed to open repo: {}", e);
+            eprintln!("Failed to open repo: {e}");
             return;
         }
     };
 
-    // Get the commiter's signature from the repo
-    let signature = match repo.signature() {
-        Ok(signature) => {
-            println!(
-                "Using signature: {:?}<{:?}>",
-                signature.name(),
-                signature.email()
-            );
-            signature
-        }
-        _ => {
-            eprintln!("Failed to get signature from repo");
-            return;
-        }
+    let signature = if let Ok(signature) = repo.signature() {
+        println!(
+            "Using signature: {:?}<{:?}>",
+            signature.name(),
+            signature.email()
+        );
+        signature
+    } else {
+        eprintln!("Failed to get signature from repo");
+        return;
     };
 
     // Make sure that the repository is not in an intermediate state (rebasing, merging, etc.)
-    match repo.state() {
-        git2::RepositoryState::Clean => {
-            println!("Repository is clean");
-        }
-        _ => {
-            eprintln!("Repository is not clean");
-            return;
-        }
+    if repo.state() == git2::RepositoryState::Clean {
+        println!("Repository is clean");
+    } else {
+        eprintln!("Repository is not clean");
+        return;
     }
 
     // Check if some changes are staged
-    match repo.statuses(None).unwrap().iter().any(|status| {
+    if repo.statuses(None).unwrap().iter().any(|status| {
         status.status().intersects(
             git2::Status::INDEX_NEW
                 | git2::Status::INDEX_MODIFIED
@@ -79,13 +71,10 @@ fn main() {
                 | git2::Status::INDEX_TYPECHANGE,
         )
     }) {
-        true => {
-            println!("Some changes are staged");
-        }
-        false => {
-            eprintln!("No changes are staged");
-            return;
-        }
+        println!("Some changes are staged");
+    } else {
+        eprintln!("No changes are staged");
+        return;
     }
 
     // Check if the branch already exists locally
@@ -107,7 +96,7 @@ fn main() {
     }
 
     // Check if there are unstaged changes
-    let unstaged_changes = match repo.statuses(None).unwrap().iter().any(|status| {
+    let unstaged_changes = if repo.statuses(None).unwrap().iter().any(|status| {
         status.status().intersects(
             git2::Status::WT_DELETED
                 | git2::Status::WT_MODIFIED
@@ -116,14 +105,11 @@ fn main() {
                 | git2::Status::WT_TYPECHANGE,
         )
     }) {
-        true => {
-            println!("Some changes are unstaged");
-            true
-        }
-        false => {
-            println!("No changes are unstaged");
-            false
-        }
+        println!("Some changes are unstaged");
+        true
+    } else {
+        println!("No changes are unstaged");
+        false
     };
 
     // Stash the unstaged changes
@@ -169,11 +155,11 @@ fn main() {
 
     // REMOVEME: This is just to avoid forgetting one stash for now
     match repo.stash_pop(0, None) {
-        Ok(_) => {
+        Ok(()) => {
             println!("Unstashed changes");
         }
         Err(e) => {
-            eprintln!("Failed to unstash changes: {}", e);
+            eprintln!("Failed to unstash changes: {e}");
             return;
         }
     }
@@ -181,15 +167,15 @@ fn main() {
     // TODO: Apply the stashed unstaged changes
     if unstaged_changes {
         match repo.stash_pop(0, None) {
-            Ok(_) => {
+            Ok(()) => {
                 println!("Unstashed changes");
             }
             Err(e) => {
-                eprintln!("Failed to unstash changes: {}", e);
+                eprintln!("Failed to unstash changes: {e}");
                 return;
             }
         }
     }
 
-    println!("Sidequest completed!")
+    println!("Sidequest completed!");
 }
