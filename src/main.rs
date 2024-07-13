@@ -145,33 +145,44 @@ fn main() {
     }
 
     // Get references to the master branch
-    let (object, reference) = repo.revparse_ext("master").expect("Object not found");
+    {
+        let (object, reference) = repo.revparse_ext("master").expect("Object not found");
 
-    // Create target branch
-    let _ = repo.branch(
-        &args.branch,
-        &repo
-            .find_commit(reference.unwrap().target().unwrap())
-            .unwrap(),
-        false,
-    );
-    println!("Created branch: {}", args.branch);
+        // Create target branch
+        if let Err(error) = repo.branch(
+            &args.branch,
+            &repo
+                .find_commit(reference.unwrap().target().unwrap())
+                .unwrap(),
+            false,
+        ) {
+            eprintln!("Failed to create target branch: {error}");
+            return;
+        }
+        println!("Created branch: {}", args.branch);
 
-    // Checkout target branch
-    if let Err(error) = repo.checkout_tree(&object, None) {
-        eprintln!("Failed to checkout target branch: {error}");
+        // Checkout target branch
+        if let Err(error) = repo.checkout_tree(&object, None) {
+            eprintln!("Failed to checkout target branch: {error}");
+            return;
+        }
+        println!("Checked out target branch");
+        if let Err(error) = repo.set_head(&("refs/heads/".to_string() + &args.branch)) {
+            eprint!("Failed to set HEAD to target branch: {error}");
+            return;
+        }
+        println!("Set HEAD to target branch");
+    }
+
+    // Apply the stashed staged changes
+    if let Err(error) = repo.stash_apply(0, None) {
+        eprintln!("Failed to apply stashed staged changes: {error}");
         return;
     }
-    println!("Checked out target branch");
-    if let Err(error) = repo.set_head(&("refs/heads/".to_string() + &args.branch)) {
-        eprint!("Failed to set HEAD to target branch: {error}");
+    if let Err(error) = repo.stash_drop(0) {
+        eprintln!("Failed to drop stashed staged changes: {error}");
         return;
     }
-    println!("Set HEAD to target branch");
-
-    // TODO: Apply the stashed staged changes
-
-    // TODO: Stage the changes
 
     // TODO: Start a commit
 
