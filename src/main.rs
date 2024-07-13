@@ -144,6 +144,12 @@ fn main() {
         }
     }
 
+    // Get references to the current branch
+    let branch_name = {
+        let binding = git2::Branch::wrap(repo.head().unwrap().resolve().unwrap());
+        binding.name().unwrap().unwrap().to_owned()
+    };
+
     // Get references to the master branch
     {
         let (object, reference) = repo.revparse_ext("master").expect("Object not found");
@@ -184,13 +190,39 @@ fn main() {
         return;
     }
 
-    // TODO: Start a commit
+    // Start a commit
+    {
+        let oid = repo.index().unwrap().write_tree().unwrap();
+        let tree = repo.find_tree(oid).unwrap();
+        let parent_commit = repo.head().unwrap().peel_to_commit().unwrap();
+        if let Err(error) = repo.commit(
+            Some("HEAD"),
+            &signature,
+            &signature,
+            "Git Sidequest: Commit staged changes",
+            &tree,
+            &[&parent_commit],
+        ) {
+            eprintln!("Failed to commit: {error}");
+            return;
+        }
+    }
 
     // TODO: Open the editor to write the commit message
 
-    // TODO: Check if the commit was successful
+    // Checkout the original branch
+    let (object, _) = repo.revparse_ext(&branch_name).expect("Object not found");
 
-    // TODO: Checkout the original branch
+    if let Err(error) = repo.checkout_tree(&object, None) {
+        eprintln!("Failed to checkout original branch: {error}");
+        return;
+    }
+    println!("Checked out original branch");
+    if let Err(error) = repo.set_head(&("refs/heads/".to_string() + &args.branch)) {
+        eprint!("Failed to set HEAD to original branch: {error}");
+        return;
+    }
+    println!("Set HEAD to original branch");
 
     // REMOVEME: This is just to avoid forgetting one stash for now
     // match repo.stash_pop(0, None) {
