@@ -144,25 +144,30 @@ fn main() {
         }
     }
 
-    // Checkout master branch
-
+    // Get references to the master branch
     let (object, reference) = repo.revparse_ext("master").expect("Object not found");
-    println!("{:?}", reference.unwrap().name());
+
+    // Create target branch
+    let _ = repo.branch(
+        &args.branch,
+        &repo
+            .find_commit(reference.unwrap().target().unwrap())
+            .unwrap(),
+        false,
+    );
+    println!("Created branch: {}", args.branch);
+
+    // Checkout target branch
     if let Err(error) = repo.checkout_tree(&object, None) {
-        eprintln!("Failed to checkout master branch: {error}");
+        eprintln!("Failed to checkout target branch: {error}");
         return;
     }
-    println!("Checked out master branch");
-    // let refname = reference.map_or("", |reference| reference.name());
-    if let Err(error) = repo.set_head("refs/heads/master") {
-        eprint!("Failed to set HEAD to master branch: {error}");
+    println!("Checked out target branch");
+    if let Err(error) = repo.set_head(&("refs/heads/".to_string() + &args.branch)) {
+        eprint!("Failed to set HEAD to target branch: {error}");
         return;
     }
-    println!("Set HEAD to master branch");
-
-    // TODO: Create branch
-
-    // TODO: Checkout the new branch
+    println!("Set HEAD to target branch");
 
     // TODO: Apply the stashed staged changes
 
