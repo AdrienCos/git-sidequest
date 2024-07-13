@@ -117,7 +117,7 @@ fn main() {
         match repo.stash_save(
             &signature,
             "git-sidequest: stash unstaged changes",
-            Some(git2::StashFlags::KEEP_INDEX),
+            Some(git2::StashFlags::KEEP_INDEX | git2::StashFlags::INCLUDE_UNTRACKED),
         ) {
             Ok(_) => {
                 println!("Stashed unstaged changes");
@@ -136,36 +136,29 @@ fn main() {
         Some(git2::StashFlags::DEFAULT),
     ) {
         Ok(_) => {
-            println!("Stashed unstaged changes");
+            println!("Stashed staged changes");
         }
         Err(e) => {
-            eprintln!("Failed to stash unstaged changes: {e}");
+            eprintln!("Failed to stash staged changes: {e}");
             return;
         }
     }
 
-    // TODO: Checkout
-    // repo.checkout_tree(&master_object, None);
-    {
-        let (object, reference) = repo.revparse_ext("master").expect("Object not found");
-        println!("{:?}", reference.unwrap().name());
-        if let Err(error) = repo.checkout_tree(&object, None) {
-            eprintln!("Failed to checkout master branch: {error}");
-            return;
-        }
-        println!("Checked out master branch");
-        // let refname = reference.map_or("", |reference| reference.name());
-        if let Err(error) = repo.set_head("refs/heads/master") {
-            eprint!("Failed to set HEAD to master branch: {error}");
-            return;
-        }
-        println!("Set HEAD to master branch");
-        // if let Error(error) = repo.set_head(reference.map(|ref: Reference| ref.name())) {
-        //     eprintln!("Failed to set HEAD to master branch: {error}");
-        //     return;
-        // }
+    // Checkout master branch
+
+    let (object, reference) = repo.revparse_ext("master").expect("Object not found");
+    println!("{:?}", reference.unwrap().name());
+    if let Err(error) = repo.checkout_tree(&object, None) {
+        eprintln!("Failed to checkout master branch: {error}");
+        return;
     }
-    // let _ = repo.checkout_head(None);
+    println!("Checked out master branch");
+    // let refname = reference.map_or("", |reference| reference.name());
+    if let Err(error) = repo.set_head("refs/heads/master") {
+        eprint!("Failed to set HEAD to master branch: {error}");
+        return;
+    }
+    println!("Set HEAD to master branch");
 
     // TODO: Create branch
 
@@ -184,28 +177,28 @@ fn main() {
     // TODO: Checkout the original branch
 
     // REMOVEME: This is just to avoid forgetting one stash for now
-    match repo.stash_pop(0, None) {
-        Ok(()) => {
-            println!("Unstashed changes");
-        }
-        Err(e) => {
-            eprintln!("Failed to unstash changes: {e}");
-            return;
-        }
-    }
+    // match repo.stash_pop(0, None) {
+    //     Ok(()) => {
+    //         println!("Unstashed changes");
+    //     }
+    //     Err(e) => {
+    //         eprintln!("Failed to unstash changes: {e}");
+    //         return;
+    //     }
+    // }
 
-    // TODO: Apply the stashed unstaged changes
-    if unstaged_changes {
-        match repo.stash_pop(0, None) {
-            Ok(()) => {
-                println!("Unstashed unstaged changes");
-            }
-            Err(e) => {
-                eprintln!("Failed to unstash unstaged changes: {e}");
-                return;
-            }
-        }
-    }
+    // // TODO: Apply the stashed unstaged changes
+    // if unstaged_changes {
+    //     match repo.stash_pop(0, None) {
+    //         Ok(()) => {
+    //             println!("Unstashed unstaged changes");
+    //         }
+    //         Err(e) => {
+    //             eprintln!("Failed to unstash unstaged changes: {e}");
+    //             return;
+    //         }
+    //     }
+    // }
 
     println!("Sidequest completed!");
 }
