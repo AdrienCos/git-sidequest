@@ -25,7 +25,7 @@ EXE_PATH="$CWD/target/debug/git-sidequest"
     head --bytes=1000 /dev/urandom | base64 > file.txt
     git add file.txt
     git commit -m "Initial commit"
-    git switch -c feature-branch
+    git switch -c original-branch
     head --bytes=1000 /dev/urandom | base64 >> file.txt
     git add file.txt
     git commit -m "Add some content"
@@ -35,7 +35,7 @@ EXE_PATH="$CWD/target/debug/git-sidequest"
     head --bytes=1000 /dev/urandom | base64 >> file.txt
     head --bytes=1000 /dev/urandom | base64 > sidequest.txt
     git add sidequest.txt
-    $EXE_PATH --branch test-branch
+    $EXE_PATH --branch sidequest-branch
 )
 
 cd "$CWD" || return 1

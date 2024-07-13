@@ -53,6 +53,12 @@ fn main() {
         return;
     };
 
+    // Get references to the current branch
+    let original_branch_name = {
+        let binding = git2::Branch::wrap(repo.head().unwrap().resolve().unwrap());
+        binding.name().unwrap().unwrap().to_owned()
+    };
+
     // Make sure that the repository is not in an intermediate state (rebasing, merging, etc.)
     if repo.state() == git2::RepositoryState::Clean {
         println!("Repository is clean");
@@ -144,12 +150,6 @@ fn main() {
         }
     }
 
-    // Get references to the current branch
-    let branch_name = {
-        let binding = git2::Branch::wrap(repo.head().unwrap().resolve().unwrap());
-        binding.name().unwrap().unwrap().to_owned()
-    };
-
     // Get references to the master branch
     {
         let (object, reference) = repo.revparse_ext("master").expect("Object not found");
@@ -208,45 +208,46 @@ fn main() {
         }
     }
 
-    // TODO: Open the editor to write the commit message
-
     // Checkout the original branch
-    let (object, _) = repo.revparse_ext(&branch_name).expect("Object not found");
+    {
+        let (object, _) = repo
+            .revparse_ext(&original_branch_name)
+            .expect("Object not found");
 
-    if let Err(error) = repo.checkout_tree(&object, None) {
-        eprintln!("Failed to checkout original branch: {error}");
-        return;
+        if let Err(error) = repo.checkout_tree(&object, None) {
+            eprintln!("Failed to checkout original branch: {error}");
+            return;
+        }
+        println!("Checked out original branch");
+        if let Err(error) = repo.set_head(&("refs/heads/".to_string() + &original_branch_name)) {
+            eprint!("Failed to set HEAD to original branch: {error}");
+            return;
+        }
+        println!("Set HEAD to original branch");
     }
-    println!("Checked out original branch");
-    if let Err(error) = repo.set_head(&("refs/heads/".to_string() + &args.branch)) {
-        eprint!("Failed to set HEAD to original branch: {error}");
-        return;
+
+    // Apply the stashed unstaged changes
+    // FIXME: sadly, we cannot create a stash that does not contain the staged files,
+    // so this stash pop will also apply the staged changes
+    // New architecture should be :
+    // - commit staged changes
+    // - stash unstaged changes
+    // - create and checkout new branch
+    // - cherry-pick the sidequest commit
+    // - checkout original branch
+    // - reset the sidequest commit
+    // - apply the stashed unstaged changes
+    if unstaged_changes {
+        match repo.stash_pop(0, None) {
+            Ok(()) => {
+                println!("Unstashed unstaged changes");
+            }
+            Err(e) => {
+                eprintln!("Failed to unstash unstaged changes: {e}");
+                return;
+            }
+        }
     }
-    println!("Set HEAD to original branch");
-
-    // REMOVEME: This is just to avoid forgetting one stash for now
-    // match repo.stash_pop(0, None) {
-    //     Ok(()) => {
-    //         println!("Unstashed changes");
-    //     }
-    //     Err(e) => {
-    //         eprintln!("Failed to unstash changes: {e}");
-    //         return;
-    //     }
-    // }
-
-    // // TODO: Apply the stashed unstaged changes
-    // if unstaged_changes {
-    //     match repo.stash_pop(0, None) {
-    //         Ok(()) => {
-    //             println!("Unstashed unstaged changes");
-    //         }
-    //         Err(e) => {
-    //             eprintln!("Failed to unstash unstaged changes: {e}");
-    //             return;
-    //         }
-    //     }
-    // }
 
     println!("Sidequest completed!");
 }
