@@ -61,6 +61,10 @@ fn create_branch(repo: &mut Repository, branch: &str, target: &str) -> Result<()
     .map(|_| ())
 }
 
+fn get_current_branch_name(repo: &Repository) -> Option<String> {
+    Some(repo.head().ok()?.shorthand()?.to_owned())
+}
+
 #[allow(clippy::too_many_lines)]
 fn main() {
     let args = Args::parse();
@@ -91,11 +95,8 @@ fn main() {
         return;
     };
 
-    // Get references to the current branch
-    let original_branch_name = {
-        let binding = git2::Branch::wrap(repo.head().unwrap().resolve().unwrap());
-        binding.name().unwrap().unwrap().to_owned()
-    };
+    // Get name of the current branch
+    let original_branch_name = get_current_branch_name(&repo).unwrap();
 
     // Make sure that the repository is not in an intermediate state (rebasing, merging, etc.)
     if repo.state() == git2::RepositoryState::Clean {
