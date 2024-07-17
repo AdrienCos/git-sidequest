@@ -88,6 +88,18 @@ fn stash_pop(repo: &mut Repository) -> Result<(), git2::Error> {
     repo.stash_drop(0)
 }
 
+fn has_unstaged_changes(repo: &Repository) -> Result<bool, git2::Error> {
+    Ok(repo.statuses(None)?.iter().any(|status| {
+        status.status().intersects(
+            git2::Status::WT_DELETED
+                | git2::Status::WT_MODIFIED
+                | git2::Status::WT_RENAMED
+                | git2::Status::WT_NEW
+                | git2::Status::WT_TYPECHANGE,
+        )
+    }))
+}
+
 #[allow(clippy::too_many_lines)]
 fn main() {
     let args = Args::parse();
@@ -164,21 +176,7 @@ fn main() {
     }
 
     // Check if there are unstaged changes
-    let unstaged_changes = if repo.statuses(None).unwrap().iter().any(|status| {
-        status.status().intersects(
-            git2::Status::WT_DELETED
-                | git2::Status::WT_MODIFIED
-                | git2::Status::WT_RENAMED
-                | git2::Status::WT_NEW
-                | git2::Status::WT_TYPECHANGE,
-        )
-    }) {
-        println!("Some changes are unstaged");
-        true
-    } else {
-        println!("No changes are unstaged");
-        false
-    };
+    let unstaged_changes = has_unstaged_changes(&repo).unwrap();
 
     // Stash the unstaged changes
     if unstaged_changes {
