@@ -65,6 +65,24 @@ fn get_current_branch_name(repo: &Repository) -> Option<String> {
     Some(repo.head().ok()?.shorthand()?.to_owned())
 }
 
+fn stash_push(
+    repo: &mut Repository,
+    signature: &Signature,
+    message: &str,
+    ignore_staged_files: bool,
+) -> Result<(), git2::Error> {
+    repo.stash_save(
+        signature,
+        message,
+        if ignore_staged_files {
+            Some(git2::StashFlags::KEEP_INDEX | git2::StashFlags::INCLUDE_UNTRACKED)
+        } else {
+            Some(git2::StashFlags::DEFAULT)
+        },
+    )
+    .map(|_| ())
+}
+
 #[allow(clippy::too_many_lines)]
 fn main() {
     let args = Args::parse();
@@ -159,35 +177,23 @@ fn main() {
 
     // Stash the unstaged changes
     if unstaged_changes {
-        match repo.stash_save(
+        stash_push(
+            &mut repo,
             &signature,
-            "git-sidequest: stash unstaged changes",
-            Some(git2::StashFlags::KEEP_INDEX | git2::StashFlags::INCLUDE_UNTRACKED),
-        ) {
-            Ok(_) => {
-                println!("Stashed unstaged changes");
-            }
-            Err(e) => {
-                eprintln!("Failed to stash unstaged changes: {e}");
-                return;
-            }
-        }
+            "git-sidequest: unstaged changes",
+            true,
+        )
+        .unwrap();
     }
 
     // Stash the staged changes
-    match repo.stash_save(
+    stash_push(
+        &mut repo,
         &signature,
-        "git-sidequest: stash staged changes",
-        Some(git2::StashFlags::DEFAULT),
-    ) {
-        Ok(_) => {
-            println!("Stashed staged changes");
-        }
-        Err(e) => {
-            eprintln!("Failed to stash staged changes: {e}");
-            return;
-        }
-    }
+        "git-sidequest: staged changes",
+        false,
+    )
+    .unwrap();
 
     // Create target branch
     create_branch(&mut repo, &args.branch, "master").unwrap();
