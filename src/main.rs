@@ -88,6 +88,15 @@ fn stash_pop(repo: &mut Repository) -> Result<(), git2::Error> {
     repo.stash_drop(0)
 }
 
+fn branch_exists(repo: &Repository, branch: &str) -> bool {
+    if repo.find_branch(branch, git2::BranchType::Local).is_ok() {
+        return true;
+    }
+    if repo.find_branch(branch, git2::BranchType::Remote).is_ok() {
+        return true;
+    }
+    false
+}
 fn has_unstaged_changes(repo: &Repository) -> Result<bool, git2::Error> {
     Ok(repo.statuses(None)?.iter().any(|status| {
         status.status().intersects(
@@ -160,20 +169,8 @@ fn main() {
     }
 
     // Check if the branch already exists locally
-    if repo
-        .find_branch(&args.branch, git2::BranchType::Local)
-        .is_ok()
-    {
-        eprintln!("Branch already exists locally");
-        return;
-    }
-
-    // Check if the branch already exists remotely
-    if repo
-        .find_branch(&args.branch, git2::BranchType::Remote)
-        .is_ok()
-    {
-        eprintln!("Branch already exists remotely");
+    if branch_exists(&repo, &args.branch) {
+        eprintln!("Branch already exists");
         return;
     }
 
