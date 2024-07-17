@@ -125,6 +125,10 @@ fn is_mid_operation(repo: &Repository) -> bool {
     repo.state() != git2::RepositoryState::Clean
 }
 
+fn default_signature(repo: &Repository) -> Result<Signature<'static>, git2::Error> {
+    repo.signature()
+}
+
 #[allow(clippy::too_many_lines)]
 fn main() {
     let args = Args::parse();
@@ -143,17 +147,8 @@ fn main() {
         }
     };
 
-    let signature = if let Ok(signature) = repo.signature() {
-        println!(
-            "Using signature: {:?}<{:?}>",
-            signature.name(),
-            signature.email()
-        );
-        signature
-    } else {
-        eprintln!("Failed to get signature from repo");
-        return;
-    };
+    // Get the default signature
+    let signature = default_signature(&repo).unwrap();
 
     // Get name of the current branch
     let original_branch_name = get_current_branch_name(&repo).unwrap();
