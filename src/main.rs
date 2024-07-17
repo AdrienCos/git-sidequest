@@ -1,7 +1,7 @@
 #![warn(clippy::all, clippy::pedantic, clippy::style)]
 
 use clap::Parser;
-use git2::Repository;
+use git2::{Repository, Signature};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -21,6 +21,24 @@ fn validate_branch_name(branch_name: &str) -> Result<String, String> {
         Ok(true) => Ok(branch_name.to_string()),
         _ => Err("Invalid branch name".to_string()),
     }
+}
+
+fn commit_on_head(
+    repo: &mut Repository,
+    signature: &Signature,
+    msg: &str,
+) -> Result<git2::Oid, git2::Error> {
+    let oid = repo.index()?.write_tree()?;
+    let tree = repo.find_tree(oid)?;
+    let parent_commit = repo.head()?.peel_to_commit()?;
+    repo.commit(
+        Some("HEAD"),
+        signature,
+        signature,
+        msg,
+        &tree,
+        &[&parent_commit],
+    )
 }
 
 #[allow(clippy::too_many_lines)]
@@ -191,22 +209,12 @@ fn main() {
     }
 
     // Start a commit
-    {
-        let oid = repo.index().unwrap().write_tree().unwrap();
-        let tree = repo.find_tree(oid).unwrap();
-        let parent_commit = repo.head().unwrap().peel_to_commit().unwrap();
-        if let Err(error) = repo.commit(
-            Some("HEAD"),
-            &signature,
-            &signature,
-            "Git Sidequest: Commit staged changes",
-            &tree,
-            &[&parent_commit],
-        ) {
-            eprintln!("Failed to commit: {error}");
-            return;
-        }
-    }
+    commit_on_head(
+        &mut repo,
+        &signature,
+        "Git Sidequest: Commit staged changes",
+    )
+    .unwrap();
 
     // Checkout the original branch
     {
