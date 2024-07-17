@@ -83,6 +83,11 @@ fn stash_push(
     .map(|_| ())
 }
 
+fn stash_pop(repo: &mut Repository) -> Result<(), git2::Error> {
+    repo.stash_apply(0, None)?;
+    repo.stash_drop(0)
+}
+
 #[allow(clippy::too_many_lines)]
 fn main() {
     let args = Args::parse();
@@ -202,14 +207,7 @@ fn main() {
     checkout_branch(&mut repo, &args.branch).unwrap();
 
     // Apply the stashed staged changes
-    if let Err(error) = repo.stash_apply(0, None) {
-        eprintln!("Failed to apply stashed staged changes: {error}");
-        return;
-    }
-    if let Err(error) = repo.stash_drop(0) {
-        eprintln!("Failed to drop stashed staged changes: {error}");
-        return;
-    }
+    stash_pop(&mut repo).unwrap();
 
     // Start a commit
     commit_on_head(
@@ -234,15 +232,7 @@ fn main() {
     // - reset the sidequest commit
     // - apply the stashed unstaged changes
     if unstaged_changes {
-        match repo.stash_pop(0, None) {
-            Ok(()) => {
-                println!("Unstashed unstaged changes");
-            }
-            Err(e) => {
-                eprintln!("Failed to unstash unstaged changes: {e}");
-                return;
-            }
-        }
+        stash_pop(&mut repo).unwrap();
     }
 
     println!("Sidequest completed!");
