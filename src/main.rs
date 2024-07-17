@@ -47,6 +47,20 @@ fn checkout_branch(repo: &mut Repository, branch: &str) -> Result<(), git2::Erro
     repo.set_head(&("refs/heads/".to_string() + branch))
 }
 
+fn create_branch(repo: &mut Repository, branch: &str, target: &str) -> Result<(), git2::Error> {
+    let (_, reference) = repo.revparse_ext(target)?;
+
+    // Create target branch
+    repo.branch(
+        branch,
+        &repo
+            .find_commit(reference.unwrap().target().unwrap())
+            .unwrap(),
+        false,
+    )
+    .map(|_| ())
+}
+
 #[allow(clippy::too_many_lines)]
 fn main() {
     let args = Args::parse();
@@ -174,23 +188,9 @@ fn main() {
         }
     }
 
-    // Get references to the master branch
-    {
-        let (_, reference) = repo.revparse_ext("master").expect("Object not found");
+    // Create target branch
+    create_branch(&mut repo, &args.branch, "master").unwrap();
 
-        // Create target branch
-        if let Err(error) = repo.branch(
-            &args.branch,
-            &repo
-                .find_commit(reference.unwrap().target().unwrap())
-                .unwrap(),
-            false,
-        ) {
-            eprintln!("Failed to create target branch: {error}");
-            return;
-        }
-        println!("Created branch: {}", args.branch);
-    }
     // Checkout target branch
     checkout_branch(&mut repo, &args.branch).unwrap();
 
