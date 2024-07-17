@@ -121,6 +121,10 @@ fn has_staged_changes(repo: &Repository) -> Result<bool, git2::Error> {
     }))
 }
 
+fn is_mid_operation(repo: &Repository) -> bool {
+    repo.state() != git2::RepositoryState::Clean
+}
+
 #[allow(clippy::too_many_lines)]
 fn main() {
     let args = Args::parse();
@@ -155,10 +159,8 @@ fn main() {
     let original_branch_name = get_current_branch_name(&repo).unwrap();
 
     // Make sure that the repository is not in an intermediate state (rebasing, merging, etc.)
-    if repo.state() == git2::RepositoryState::Clean {
-        println!("Repository is clean");
-    } else {
-        eprintln!("Repository is not clean");
+    if is_mid_operation(&repo) {
+        eprintln!("An operation is already in progress");
         return;
     }
 
