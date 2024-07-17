@@ -100,6 +100,18 @@ fn has_unstaged_changes(repo: &Repository) -> Result<bool, git2::Error> {
     }))
 }
 
+fn has_staged_changes(repo: &Repository) -> Result<bool, git2::Error> {
+    Ok(repo.statuses(None)?.iter().any(|status| {
+        status.status().intersects(
+            git2::Status::INDEX_NEW
+                | git2::Status::INDEX_MODIFIED
+                | git2::Status::INDEX_DELETED
+                | git2::Status::INDEX_RENAMED
+                | git2::Status::INDEX_TYPECHANGE,
+        )
+    }))
+}
+
 #[allow(clippy::too_many_lines)]
 fn main() {
     let args = Args::parse();
@@ -142,18 +154,8 @@ fn main() {
     }
 
     // Check if some changes are staged
-    if repo.statuses(None).unwrap().iter().any(|status| {
-        status.status().intersects(
-            git2::Status::INDEX_NEW
-                | git2::Status::INDEX_MODIFIED
-                | git2::Status::INDEX_DELETED
-                | git2::Status::INDEX_RENAMED
-                | git2::Status::INDEX_TYPECHANGE,
-        )
-    }) {
-        println!("Some changes are staged");
-    } else {
-        eprintln!("No changes are staged");
+    if !has_staged_changes(&repo).unwrap() {
+        eprintln!("No staged changes");
         return;
     }
 
