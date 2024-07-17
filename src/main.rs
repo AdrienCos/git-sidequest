@@ -41,6 +41,12 @@ fn commit_on_head(
     )
 }
 
+fn checkout_branch(repo: &mut Repository, branch: &str) -> Result<(), git2::Error> {
+    let (object, _) = repo.revparse_ext(branch)?;
+    repo.checkout_tree(&object, None)?;
+    repo.set_head(&("refs/heads/".to_string() + branch))
+}
+
 #[allow(clippy::too_many_lines)]
 fn main() {
     let args = Args::parse();
@@ -170,7 +176,7 @@ fn main() {
 
     // Get references to the master branch
     {
-        let (object, reference) = repo.revparse_ext("master").expect("Object not found");
+        let (_, reference) = repo.revparse_ext("master").expect("Object not found");
 
         // Create target branch
         if let Err(error) = repo.branch(
@@ -184,19 +190,9 @@ fn main() {
             return;
         }
         println!("Created branch: {}", args.branch);
-
-        // Checkout target branch
-        if let Err(error) = repo.checkout_tree(&object, None) {
-            eprintln!("Failed to checkout target branch: {error}");
-            return;
-        }
-        println!("Checked out target branch");
-        if let Err(error) = repo.set_head(&("refs/heads/".to_string() + &args.branch)) {
-            eprint!("Failed to set HEAD to target branch: {error}");
-            return;
-        }
-        println!("Set HEAD to target branch");
     }
+    // Checkout target branch
+    checkout_branch(&mut repo, &args.branch).unwrap();
 
     // Apply the stashed staged changes
     if let Err(error) = repo.stash_apply(0, None) {
@@ -217,22 +213,7 @@ fn main() {
     .unwrap();
 
     // Checkout the original branch
-    {
-        let (object, _) = repo
-            .revparse_ext(&original_branch_name)
-            .expect("Object not found");
-
-        if let Err(error) = repo.checkout_tree(&object, None) {
-            eprintln!("Failed to checkout original branch: {error}");
-            return;
-        }
-        println!("Checked out original branch");
-        if let Err(error) = repo.set_head(&("refs/heads/".to_string() + &original_branch_name)) {
-            eprint!("Failed to set HEAD to original branch: {error}");
-            return;
-        }
-        println!("Set HEAD to original branch");
-    }
+    checkout_branch(&mut repo, &original_branch_name).unwrap();
 
     // Apply the stashed unstaged changes
     // FIXME: sadly, we cannot create a stash that does not contain the staged files,
