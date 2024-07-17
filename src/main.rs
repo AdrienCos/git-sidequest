@@ -129,6 +129,10 @@ fn default_signature(repo: &Repository) -> Result<Signature<'static>, git2::Erro
     repo.signature()
 }
 
+fn open_repository() -> Result<Repository, git2::Error> {
+    Repository::discover(".")
+}
+
 #[allow(clippy::too_many_lines)]
 fn main() {
     let args = Args::parse();
@@ -136,16 +140,7 @@ fn main() {
     println!("Sidequest started : {}", args.branch);
 
     // Check if we are in a git repo
-    let mut repo = match Repository::discover(".") {
-        Ok(repo) => {
-            println!("Opening repo: {:?}", repo.path());
-            repo
-        }
-        Err(e) => {
-            eprintln!("Failed to open repo: {e}");
-            return;
-        }
-    };
+    let mut repo = open_repository().unwrap();
 
     // Get the default signature
     let signature = default_signature(&repo).unwrap();
