@@ -77,6 +77,44 @@ pub mod lib {
         repo.stash_drop(0)
     }
 
+    pub fn rebase_branch(
+        repo: &mut Repository,
+        current: &str,
+        target: &str,
+        onto: &str,
+        signature: &Signature,
+    ) -> Result<(), git2::Error> {
+        let current_ref = repo
+            .find_branch(current, git2::BranchType::Local)?
+            .into_reference();
+        let target_ref = repo
+            .find_branch(target, git2::BranchType::Local)?
+            .into_reference();
+        let onto_ref = repo
+            .find_branch(onto, git2::BranchType::Local)?
+            .into_reference();
+        let current_annotated_commit = repo.reference_to_annotated_commit(&current_ref)?;
+        let target_annotated_commit = repo.reference_to_annotated_commit(&target_ref)?;
+        let onto_annotated_commit = repo.reference_to_annotated_commit(&onto_ref)?;
+        let mut rebase = repo.rebase(
+            Some(&current_annotated_commit),
+            Some(&target_annotated_commit),
+            Some(&onto_annotated_commit),
+            None,
+        )?;
+        while let Some(op) = rebase.next() {
+            println!("{:?}", op);
+            match op?.kind() {
+                Some(git2::RebaseOperationType::Pick) => {
+                    rebase.commit(None, signature, None).map(|_| ())?
+                }
+                Some(_) => {}
+                None => {}
+            }
+        }
+        rebase.finish(Some(signature))
+    }
+
     pub fn branch_exists(repo: &Repository, branch: &str) -> bool {
         if repo.find_branch(branch, git2::BranchType::Local).is_ok() {
             return true;
