@@ -29,6 +29,9 @@ EXE_PATH="$CWD/target/debug/git-sidequest"
     head --bytes=1000 /dev/urandom | base64 >> file.txt
     git add file.txt
     git commit -m "Add some content"
+    head --bytes=1000 /dev/urandom | base64 >> file.txt
+    git add file.txt
+    git commit -m "Add some more content"
 
     # Run the test
     head --bytes=1000 /dev/urandom | base64 > non-sidequest.txt
@@ -36,6 +39,8 @@ EXE_PATH="$CWD/target/debug/git-sidequest"
     head --bytes=1000 /dev/urandom | base64 > sidequest.txt
     git add sidequest.txt
     $EXE_PATH --branch sidequest-branch
+
+    git log --graph --all --oneline
 )
 
 cd "$CWD" || return 1
