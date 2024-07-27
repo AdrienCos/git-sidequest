@@ -100,10 +100,9 @@ pub fn rebase_branch(
     while let Some(op) = rebase.next() {
         match op?.kind() {
             Some(git2::RebaseOperationType::Pick) => {
-                rebase.commit(None, signature, None).map(|_| ())?
+                rebase.commit(None, signature, None).map(|_| ())?;
             }
-            Some(_) => {}
-            None => {}
+            Some(_) | None => {}
         }
     }
     rebase.finish(Some(signature))
