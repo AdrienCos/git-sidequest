@@ -103,7 +103,6 @@ pub mod lib {
             None,
         )?;
         while let Some(op) = rebase.next() {
-            println!("{:?}", op);
             match op?.kind() {
                 Some(git2::RebaseOperationType::Pick) => {
                     rebase.commit(None, signature, None).map(|_| ())?

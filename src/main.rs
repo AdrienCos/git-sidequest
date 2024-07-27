@@ -52,6 +52,20 @@ fn main() {
     // Check if there are unstaged changes
     let unstaged_changes = lib::has_unstaged_changes(&repo).unwrap();
 
+    // Create the target branch at HEAD
+    lib::create_branch(&mut repo, &args.branch, "HEAD").unwrap();
+
+    // Checkout target branch
+    lib::checkout_branch(&mut repo, &args.branch).unwrap();
+
+    // Commit the staged changes
+    lib::commit_on_head(
+        &mut repo,
+        &signature,
+        "Git Sidequest: Commit staged changes",
+    )
+    .unwrap();
+
     // Stash the unstaged changes
     if unstaged_changes {
         lib::stash_push(
@@ -62,30 +76,13 @@ fn main() {
         )
         .unwrap();
     }
-
-    // Stash the staged changes
-    lib::stash_push(
+    // Rebase the target branch on the master branch
+    lib::rebase_branch(
         &mut repo,
+        &args.branch,
+        &original_branch_name,
+        "master",
         &signature,
-        "git-sidequest: staged changes",
-        false,
-    )
-    .unwrap();
-
-    // Create target branch
-    lib::create_branch(&mut repo, &args.branch, "master").unwrap();
-
-    // Checkout target branch
-    lib::checkout_branch(&mut repo, &args.branch).unwrap();
-
-    // Apply the stashed staged changes
-    lib::stash_pop(&mut repo).unwrap();
-
-    // Start a commit
-    lib::commit_on_head(
-        &mut repo,
-        &signature,
-        "Git Sidequest: Commit staged changes",
     )
     .unwrap();
 
@@ -93,16 +90,6 @@ fn main() {
     lib::checkout_branch(&mut repo, &original_branch_name).unwrap();
 
     // Apply the stashed unstaged changes
-    // FIXME: sadly, we cannot create a stash that does not contain the staged files,
-    // so this stash pop will also apply the staged changes
-    // New architecture should be :
-    // - commit staged changes
-    // - stash unstaged changes
-    // - create and checkout new branch
-    // - cherry-pick the sidequest commit
-    // - checkout original branch
-    // - reset the sidequest commit
-    // - apply the stashed unstaged changes
     if unstaged_changes {
         lib::stash_pop(&mut repo).unwrap();
     }
