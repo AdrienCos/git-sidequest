@@ -29,59 +29,22 @@ fn main() {
     // Instantiate the app
     let mut app = app::App::new(repo);
 
-    // Get the default signature
-    let signature = app.default_signature().unwrap();
+    // Get the signature that will be used for the new commit
+    let signature = match app.default_signature() {
+        Ok(sign) => sign,
+        Err(e) => {
+            eprint!("Sidequest failed: {e}");
+            return;
+        }
+    };
 
-    // Get name of the current branch
-    let original_branch_name = app.get_current_branch_name().unwrap();
-
-    // Make sure that the repository is not in an intermediate state (rebasing, merging, etc.)
-    if app.is_mid_operation() {
-        eprintln!("An operation is already in progress");
-        return;
+    // Accomplish a sidequest
+    match app.run(&args.branch, Some(&signature)) {
+        Ok(()) => {
+            println!("Sidequest successful!");
+        }
+        Err(e) => {
+            eprintln!("Sidequest failed: {e}");
+        }
     }
-
-    // Check if some changes are staged
-    if !app.has_staged_changes().unwrap() {
-        eprintln!("No staged changes");
-        return;
-    }
-
-    // Check if the branch already exists locally
-    if app.branch_exists(&args.branch) {
-        eprintln!("Branch already exists");
-        return;
-    }
-
-    // Check if there are unstaged changes
-    let unstaged_changes = app.has_unstaged_changes().unwrap();
-
-    // Create the target branch at HEAD
-    app.create_branch(&args.branch, "HEAD").unwrap();
-
-    // Checkout target branch
-    app.checkout_branch(&args.branch).unwrap();
-
-    // Commit the staged changes
-    app.commit_on_head(&signature, "Git Sidequest: Commit staged changes")
-        .unwrap();
-
-    // Stash the unstaged changes
-    if unstaged_changes {
-        app.stash_push(&signature, "git-sidequest: unstaged changes", true)
-            .unwrap();
-    }
-    // Rebase the target branch on the master branch
-    app.rebase_branch(&args.branch, &original_branch_name, "master", &signature)
-        .unwrap();
-
-    // Checkout the original branch
-    app.checkout_branch(&original_branch_name).unwrap();
-
-    // Apply the stashed unstaged changes
-    if unstaged_changes {
-        app.stash_pop().unwrap();
-    }
-
-    println!("Sidequest completed!");
 }
