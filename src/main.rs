@@ -15,10 +15,6 @@ struct Args {
         default_value = "master"
     )]
     onto: String,
-    // TODO: Add '--no-verify' option
-    // TODO: Add '-a/--add' option
-    // TODO: Add '-m/--message' option
-    // TODO: Add '-n/--dry-run' option
 }
 
 #[allow(clippy::too_many_lines)]
