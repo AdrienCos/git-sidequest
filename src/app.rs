@@ -77,14 +77,14 @@ impl App {
         self.checkout_branch(target_branch)?;
 
         // Commit the staged changes
-        self.commit_on_head(&signature, "Git Sidequest: Commit staged changes")?;
+        self.commit_on_head(signature, "Git Sidequest: Commit staged changes")?;
 
         // Stash the unstaged changes
         if unstaged_changes {
-            self.stash_push(&signature, "git-sidequest: unstaged changes", true)?;
+            self.stash_push(signature, "git-sidequest: unstaged changes", true)?;
         }
         // Rebase the target branch on the master branch
-        self.rebase_branch(target_branch, &original_branch_name, "master", &signature)?;
+        self.rebase_branch(target_branch, &original_branch_name, "master", signature)?;
 
         // Checkout the original branch
         self.checkout_branch(&original_branch_name)?;
