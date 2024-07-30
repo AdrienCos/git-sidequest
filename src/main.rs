@@ -9,11 +9,16 @@ mod utils;
 struct Args {
     #[arg(help = "Name of the branch to create", value_parser = utils::validate_branch_name)]
     branch: String,
+    #[arg(
+        long,
+        help = "Existing onto which to create the new branch",
+        default_value = "master"
+    )]
+    onto: String,
     // TODO: Add '--no-verify' option
     // TODO: Add '-a/--add' option
     // TODO: Add '-m/--message' option
     // TODO: Add '-n/--dry-run' option
-    // TODO: Add '--onto' option to designate the base branch
 }
 
 #[allow(clippy::too_many_lines)]
@@ -38,7 +43,7 @@ fn main() {
     };
 
     // Accomplish a sidequest
-    match app.run(&args.branch, Some(&signature)) {
+    match app.run(&args.branch, &args.onto, Some(&signature)) {
         Ok(()) => {
             println!("Sidequest successful!");
         }

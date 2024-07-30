@@ -37,6 +37,7 @@ impl App {
     pub fn run(
         &mut self,
         target_branch: &str,
+        onto_branch: &str,
         signature: Option<&Signature>,
     ) -> Result<(), SidequestError> {
         // Get the default signature if none was provided
@@ -60,10 +61,17 @@ impl App {
             return Err(SidequestError::App(String::from("No staged changes found")));
         }
 
-        // Check if the branch already exists locally
+        // Check if the branch already exists
         if self.branch_exists(target_branch) {
             return Err(SidequestError::App(String::from(
                 "Target branch already exists",
+            )));
+        }
+
+        // Ensure the the 'onto' branch exists
+        if !self.branch_exists(onto_branch) {
+            return Err(SidequestError::App(String::from(
+                "Onto branch does not exist",
             )));
         }
 
@@ -84,7 +92,7 @@ impl App {
             self.stash_push(signature, "git-sidequest: unstaged changes", true)?;
         }
         // Rebase the target branch on the master branch
-        self.rebase_branch(target_branch, &original_branch_name, "master", signature)?;
+        self.rebase_branch(target_branch, &original_branch_name, onto_branch, signature)?;
 
         // Checkout the original branch
         self.checkout_branch(&original_branch_name)?;

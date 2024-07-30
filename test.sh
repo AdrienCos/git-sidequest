@@ -12,26 +12,26 @@ if [ "$(ls -A $TMPDIR)" ];
 then
     mv "$TMPDIR/"* "$TRASHDIR"
 fi
-WORKDIR=$(mktemp -d --tmpdir="$TMPDIR")
 CWD=$(pwd)
 
 cargo build
 EXE_PATH="$CWD/target/debug/git-sidequest"
 
 (
-    # Setup the test git repository
+    # Setup the test git repository for the no-args test
+    WORKDIR=$(mktemp -d --tmpdir="$TMPDIR")
     cd "$WORKDIR" || return 1
-    git init
+    git init --quiet
     head --bytes=1000 /dev/urandom | base64 > file.txt
     git add file.txt
-    git commit -m "Initial commit"
-    git switch -c original-branch
+    git commit -m "Initial commit" --quiet
+    git switch -c original-branch --quiet
     head --bytes=1000 /dev/urandom | base64 >> file.txt
     git add file.txt
-    git commit -m "Add some content"
+    git commit -m "Add some content" --quiet
     head --bytes=1000 /dev/urandom | base64 >> file.txt
     git add file.txt
-    git commit -m "Add some more content"
+    git commit -m "Add some more content" --quiet
 
     # Run the test
     head --bytes=1000 /dev/urandom | base64 > non-sidequest.txt
@@ -39,6 +39,33 @@ EXE_PATH="$CWD/target/debug/git-sidequest"
     head --bytes=1000 /dev/urandom | base64 > sidequest.txt
     git add sidequest.txt
     $EXE_PATH sidequest-branch
+
+    git log --graph --all --oneline
+)
+
+(
+    # Setup the test git repository for the onto test
+    WORKDIR=$(mktemp -d --tmpdir="$TMPDIR")
+    cd "$WORKDIR" || return 1
+    git init --quiet
+    head --bytes=1000 /dev/urandom | base64 > file.txt
+    git add file.txt
+    git commit -m "Initial commit" --quiet
+    git switch -c onto-branch --quiet
+    head --bytes=1000 /dev/urandom | base64 >> file.txt
+    git add file.txt
+    git commit -m "Add some content" --quiet
+    git switch -c original-branch --quiet
+    head --bytes=1000 /dev/urandom | base64 >> file.txt
+    git add file.txt
+    git commit -m "Add some more content" --quiet
+
+    # Run the test
+    head --bytes=1000 /dev/urandom | base64 > non-sidequest.txt
+    head --bytes=1000 /dev/urandom | base64 >> file.txt
+    head --bytes=1000 /dev/urandom | base64 > sidequest.txt
+    git add sidequest.txt
+    $EXE_PATH --onto onto-branch sidequest-branch
 
     git log --graph --all --oneline
 )
