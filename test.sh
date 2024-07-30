@@ -38,7 +38,7 @@ EXE_PATH="$CWD/target/debug/git-sidequest"
     head --bytes=1000 /dev/urandom | base64 >> file.txt
     head --bytes=1000 /dev/urandom | base64 > sidequest.txt
     git add sidequest.txt
-    $EXE_PATH --branch sidequest-branch
+    $EXE_PATH sidequest-branch
 
     git log --graph --all --oneline
 )

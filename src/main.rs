@@ -7,7 +7,7 @@ mod utils;
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
-    #[arg(short, long, help = "Name of the branch to create", value_parser = utils::validate_branch_name)]
+    #[arg(help = "Name of the branch to create", value_parser = utils::validate_branch_name)]
     branch: String,
     // TODO: Add '--no-verify' option
     // TODO: Add '-a/--add' option
