@@ -38,7 +38,7 @@ EXE_PATH="$CWD/target/debug/git-sidequest"
     head --bytes=1000 /dev/urandom | base64 >> file.txt
     head --bytes=1000 /dev/urandom | base64 > sidequest.txt
     git add sidequest.txt
-    $EXE_PATH sidequest-branch
+    $EXE_PATH sidequest-branch --message "Commit message for sidequest"
 
     git log --graph --all --oneline
 )
@@ -65,7 +65,7 @@ EXE_PATH="$CWD/target/debug/git-sidequest"
     head --bytes=1000 /dev/urandom | base64 >> file.txt
     head --bytes=1000 /dev/urandom | base64 > sidequest.txt
     git add sidequest.txt
-    $EXE_PATH --onto onto-branch sidequest-branch
+    $EXE_PATH --onto onto-branch sidequest-branch -m "Commit message for onto-branch sidequest"
 
     git log --graph --all --oneline
 )

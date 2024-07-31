@@ -1,6 +1,6 @@
 # Planned features and ideas
 
-- [ ] Add '-m/--message' option
+- [X] Add '-m/--message' option
     Implementation idea: <https://stackoverflow.com/a/56012454>
 - [ ] Add '-n/--dry-run' option
 - [ ] Add '-q/--quiet' option

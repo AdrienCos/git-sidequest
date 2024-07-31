@@ -1,6 +1,13 @@
-use std::fmt;
+use std::{
+    env, fmt,
+    fs::File,
+    io::{Read, Write},
+    process::Command,
+};
 
 use git2::{Repository, Signature};
+
+use crate::constants::DEFAULT_COMMIT_MESSAGE;
 
 pub struct App {
     repo: Repository,
@@ -39,6 +46,7 @@ impl App {
         target_branch: &str,
         onto_branch: &str,
         signature: Option<&Signature>,
+        message: Option<&str>,
     ) -> Result<(), SidequestError> {
         // Get the default signature if none was provided
         let signature = match signature {
@@ -75,6 +83,12 @@ impl App {
             )));
         }
 
+        // If not provided, get a commit message from the user
+        let message = match message {
+            Some(msg) => msg,
+            None => &self.get_commit_msg_from_editor()?,
+        };
+
         // Check if there are unstaged changes
         let unstaged_changes = self.has_unstaged_changes()?;
 
@@ -85,7 +99,7 @@ impl App {
         self.checkout_branch(target_branch)?;
 
         // Commit the staged changes
-        self.commit_on_head(signature, "Git Sidequest: Commit staged changes")?;
+        self.commit_on_head(signature, message)?;
 
         // Stash the unstaged changes
         if unstaged_changes {
@@ -205,6 +219,88 @@ impl App {
             }
         }
         rebase.finish(Some(signature))
+    }
+
+    fn get_commit_msg_from_editor(&self) -> Result<String, SidequestError> {
+        // Get the path of the .git directory
+        let repo_path = self.repo.workdir().ok_or(SidequestError::App(String::from(
+            "Unable to find the path to the .git directory",
+        )))?;
+        let buffer_path = repo_path.join(".git").join("COMMIT_EDITMSG");
+
+        // Create an empty COMMIT_MSG file in the directory
+        let mut file = match File::create(&buffer_path) {
+            Err(why) => Err(SidequestError::App(format!(
+                "Failed to create commit message buffer {}: {}",
+                buffer_path.display(),
+                why,
+            ))),
+            Ok(f) => Ok(f),
+        }?;
+
+        // Write the default commit message comments to the file
+        file.write_all(DEFAULT_COMMIT_MESSAGE.as_bytes())
+            .map_err(|why| {
+                SidequestError::App(format!(
+                    "Failed to write initial contents of the commit message: {why}"
+                ))
+            })?;
+
+        // Open it with the user's $EDITOR, or fallback to vi
+        let editor = env::var("EDITOR").unwrap_or(String::from("vi"));
+        match Command::new(editor.clone()).arg(&buffer_path).status() {
+            Err(why) => {
+                return match why.kind() {
+                    std::io::ErrorKind::NotFound => Err(SidequestError::App(format!(
+                        "{editor} was not found in your PATH, cannot edit commit message."
+                    ))),
+                    _ => Err(SidequestError::App(format!(
+                        "Failed while writing commit message: {why}"
+                    ))),
+                }
+            }
+            Ok(status) => {
+                if status.success() {
+                    Ok(())
+                } else {
+                    Err(SidequestError::App(format!(
+                        "Failed while writing commit message with status code: {status}"
+                    )))
+                }
+            }
+        }?;
+
+        // Read the file
+        let mut message = String::new();
+        let mut file = match File::open(buffer_path) {
+            Ok(f) => Ok(f),
+            Err(why) => Err(SidequestError::App(format!(
+                "Unable to read back commit message : {why}"
+            ))),
+        }?;
+        match file.read_to_string(&mut message) {
+            Ok(_) => Ok(()),
+            Err(why) => Err(SidequestError::App(format!(
+                "Error while reading commit message : {why}"
+            ))),
+        }?;
+
+        // Delete lines starting with a #
+        let lines_without_comments: String = message
+            .trim()
+            .split_inclusive('\n')
+            .filter(|line| !line.starts_with('#'))
+            .collect();
+
+        // Check if at least one non-blank line remains
+        if lines_without_comments.trim().is_empty() {
+            return Err(SidequestError::App(String::from(
+                "Empty commit message, aborting",
+            )));
+        }
+
+        // Return its contents, or error if the file is empty
+        Ok(lines_without_comments)
     }
 
     fn branch_exists(&self, branch: &str) -> bool {

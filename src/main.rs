@@ -2,6 +2,7 @@
 
 use clap::Parser;
 mod app;
+mod constants;
 mod utils;
 
 #[derive(Parser, Debug)]
@@ -15,13 +16,15 @@ struct Args {
         default_value = "master"
     )]
     onto: String,
+    #[arg(short, long, help = "Commit message")]
+    message: Option<String>,
 }
 
 #[allow(clippy::too_many_lines)]
 fn main() {
     let args = Args::parse();
 
-    println!("Sidequest started : {}", args.branch);
+    println!("Sidequest started: {}", args.branch);
 
     // Check if we are in a git repo
     let repo = utils::open_repository().unwrap();
@@ -38,8 +41,10 @@ fn main() {
         }
     };
 
+    let message = args.message.as_deref();
+
     // Accomplish a sidequest
-    match app.run(&args.branch, &args.onto, Some(&signature)) {
+    match app.run(&args.branch, &args.onto, Some(&signature), message) {
         Ok(()) => {
             println!("Sidequest successful!");
         }
