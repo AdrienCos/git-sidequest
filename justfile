@@ -14,3 +14,7 @@ release:
 # Build and install the app to $HOME/.cargo/bin
 install:
     cargo install --path .
+# Remove build artifacts
+clean:
+    cargo clean
+    rm -f result
