@@ -2,10 +2,21 @@
   pkgs,
   lib,
   stdenv,
+  fenix,
 }: let
   manifest = (pkgs.lib.importTOML ./Cargo.toml).package;
+  toolchain =
+    fenix.fromToolchainFile
+    {
+      file = ./rust-toolchain.toml;
+      sha256 = "sha256-6eN/GKzjVSjEhGO9FhWObkRFaE1Jf+uqMSdQnb8lcB4=";
+    };
 in
-  pkgs.rustPlatform.buildRustPackage {
+  (pkgs.makeRustPlatform {
+    cargo = toolchain;
+    rustc = toolchain;
+  })
+  .buildRustPackage {
     pname = manifest.name;
     version = manifest.version;
     cargoLock.lockFile = ./Cargo.lock;

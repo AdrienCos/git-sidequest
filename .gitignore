@@ -1,1 +1,6 @@
 /target
+
+# Nix-related files
+/result
+/profile
+/profile-*
