@@ -1,5 +1,7 @@
 #![warn(clippy::all, clippy::pedantic, clippy::style)]
 
+use std::process::exit;
+
 use clap::Parser;
 mod app;
 mod constants;
@@ -50,6 +52,7 @@ fn main() {
         }
         Err(e) => {
             eprintln!("Sidequest failed: {e}");
+            exit(1);
         }
     }
 }

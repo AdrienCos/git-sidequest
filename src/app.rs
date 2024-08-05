@@ -54,9 +54,6 @@ impl App {
             None => &self.default_signature()?,
         };
 
-        // Get name of the current branch
-        let original_branch_name = self.get_current_branch_name().unwrap();
-
         // Make sure that the repository is not in an intermediate state (rebasing, merging, etc.)
         if self.is_mid_operation() {
             return Err(SidequestError::App(String::from(
@@ -82,6 +79,9 @@ impl App {
                 "Onto branch does not exist",
             )));
         }
+
+        // Get name of the current branch
+        let original_branch_name = self.get_current_branch_name()?;
 
         // If not provided, get a commit message from the user
         let message = match message {
@@ -154,8 +154,19 @@ impl App {
             .map(|_| ())
     }
 
-    fn get_current_branch_name(&self) -> Option<String> {
-        Some(self.repo.head().ok()?.shorthand()?.to_owned())
+    fn get_current_branch_name(&self) -> Result<String, SidequestError> {
+        let head_ref = self.repo.head()?;
+        if !head_ref.is_branch() {
+            return Err(SidequestError::App(String::from(
+                "HEAD is not the top of a local branch",
+            )));
+        }
+        let Some(branch_name) = head_ref.shorthand() else {
+            return Err(SidequestError::App(String::from(
+                "Unable to get the name of the current branch",
+            )));
+        };
+        Ok(branch_name.to_owned())
     }
 
     fn stash_push(
