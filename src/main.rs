@@ -1,7 +1,6 @@
 #![warn(clippy::all, clippy::pedantic, clippy::style)]
 
-use std::process::exit;
-
+use anyhow::{bail, Result};
 use clap::Parser;
 mod app;
 mod constants;
@@ -23,7 +22,7 @@ struct Args {
 }
 
 #[allow(clippy::too_many_lines)]
-fn main() {
+fn main() -> Result<()> {
     let args = Args::parse();
 
     println!("Sidequest started: {}", args.branch);
@@ -38,8 +37,7 @@ fn main() {
     let signature = match app.default_signature() {
         Ok(sign) => sign,
         Err(e) => {
-            eprint!("Sidequest failed: {e}");
-            return;
+            bail!(e);
         }
     };
 
@@ -49,10 +47,10 @@ fn main() {
     match app.run(&args.branch, &args.onto, Some(&signature), message) {
         Ok(()) => {
             println!("Sidequest successful!");
+            Ok(())
         }
         Err(e) => {
-            eprintln!("Sidequest failed: {e}");
-            exit(1);
+            bail!(e);
         }
     }
 }

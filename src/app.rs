@@ -1,11 +1,11 @@
+use anyhow::{anyhow, bail, Result};
+use git2::{Repository, Signature};
 use std::{
-    env, fmt,
+    env,
     fs::File,
     io::{Read, Write},
     process::Command,
 };
-
-use git2::{Repository, Signature};
 
 use crate::constants::DEFAULT_COMMIT_MESSAGE;
 
@@ -13,29 +13,6 @@ pub struct App {
     repo: Repository,
 }
 
-pub enum SidequestError {
-    Git(git2::Error),
-    App(String),
-}
-
-impl From<git2::Error> for SidequestError {
-    fn from(e: git2::Error) -> Self {
-        SidequestError::Git(e)
-    }
-}
-impl fmt::Display for SidequestError {
-    // This trait requires `fmt` with this exact signature.
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        // Write strictly the first element into the supplied output
-        // stream: `f`. Returns `fmt::Result` which indicates whether the
-        // operation succeeded or failed. Note that `write!` uses syntax which
-        // is very similar to `println!`.
-        match self {
-            SidequestError::App(err) => write!(f, "{err}"),
-            SidequestError::Git(err) => write!(f, "{err}"),
-        }
-    }
-}
 impl App {
     pub fn new(repo: Repository) -> App {
         App { repo }
@@ -47,7 +24,7 @@ impl App {
         onto_branch: &str,
         signature: Option<&Signature>,
         message: Option<&str>,
-    ) -> Result<(), SidequestError> {
+    ) -> Result<()> {
         // Get the default signature if none was provided
         let signature = match signature {
             Some(sign) => sign,
@@ -56,28 +33,22 @@ impl App {
 
         // Make sure that the repository is not in an intermediate state (rebasing, merging, etc.)
         if self.is_mid_operation() {
-            return Err(SidequestError::App(String::from(
-                "An operation is already in progress",
-            )));
+            return Err(anyhow!("An operation is already in progress",));
         }
 
         // Check if some changes are staged
         if !self.has_staged_changes()? {
-            return Err(SidequestError::App(String::from("No staged changes found")));
+            return Err(anyhow!("No staged changes found"));
         }
 
         // Check if the branch already exists
         if self.branch_exists(target_branch) {
-            return Err(SidequestError::App(String::from(
-                "Target branch already exists",
-            )));
+            return Err(anyhow!("Target branch already exists",));
         }
 
         // Ensure the the 'onto' branch exists
         if !self.branch_exists(onto_branch) {
-            return Err(SidequestError::App(String::from(
-                "Onto branch does not exist",
-            )));
+            return Err(anyhow!("Onto branch does not exist",));
         }
 
         // Get name of the current branch
@@ -118,31 +89,32 @@ impl App {
         Ok(())
     }
 
-    fn commit_on_head(&self, signature: &Signature, msg: &str) -> Result<git2::Oid, git2::Error> {
+    fn commit_on_head(&self, signature: &Signature, msg: &str) -> Result<git2::Oid> {
         let oid = self.repo.index()?.write_tree()?;
         let tree = self.repo.find_tree(oid)?;
         let parent_commit = self.repo.head()?.peel_to_commit()?;
-        self.repo.commit(
+        Ok(self.repo.commit(
             Some("HEAD"),
             signature,
             signature,
             msg,
             &tree,
             &[&parent_commit],
-        )
+        )?)
     }
 
-    fn checkout_branch(&self, branch: &str) -> Result<(), git2::Error> {
+    fn checkout_branch(&self, branch: &str) -> Result<()> {
         let (object, _) = self.repo.revparse_ext(branch)?;
         self.repo.checkout_tree(&object, None)?;
-        self.repo.set_head(&("refs/heads/".to_string() + branch))
+        Ok(self.repo.set_head(&("refs/heads/".to_string() + branch))?)
     }
 
-    fn create_branch(&self, branch: &str, target: &str) -> Result<(), git2::Error> {
+    fn create_branch(&self, branch: &str, target: &str) -> Result<()> {
         let (_, reference) = self.repo.revparse_ext(target)?;
 
         // Create target branch
-        self.repo
+        Ok(self
+            .repo
             .branch(
                 branch,
                 &self
@@ -151,20 +123,16 @@ impl App {
                     .unwrap(),
                 false,
             )
-            .map(|_| ())
+            .map(|_| ())?)
     }
 
-    fn get_current_branch_name(&self) -> Result<String, SidequestError> {
+    fn get_current_branch_name(&self) -> Result<String> {
         let head_ref = self.repo.head()?;
         if !head_ref.is_branch() {
-            return Err(SidequestError::App(String::from(
-                "HEAD is not the top of a local branch",
-            )));
+            bail!("HEAD is not the top of a local branch",);
         }
         let Some(branch_name) = head_ref.shorthand() else {
-            return Err(SidequestError::App(String::from(
-                "Unable to get the name of the current branch",
-            )));
+            bail!("Unable to get the name of the current branch",);
         };
         Ok(branch_name.to_owned())
     }
@@ -174,8 +142,9 @@ impl App {
         signature: &Signature,
         message: &str,
         ignore_staged_files: bool,
-    ) -> Result<(), git2::Error> {
-        self.repo
+    ) -> Result<()> {
+        Ok(self
+            .repo
             .stash_save(
                 signature,
                 message,
@@ -185,12 +154,12 @@ impl App {
                     Some(git2::StashFlags::DEFAULT)
                 },
             )
-            .map(|_| ())
+            .map(|_| ())?)
     }
 
-    fn stash_pop(&mut self) -> Result<(), git2::Error> {
+    fn stash_pop(&mut self) -> Result<()> {
         self.repo.stash_apply(0, None)?;
-        self.repo.stash_drop(0)
+        Ok(self.repo.stash_drop(0)?)
     }
 
     fn rebase_branch(
@@ -199,7 +168,7 @@ impl App {
         target: &str,
         onto: &str,
         signature: &Signature,
-    ) -> Result<(), git2::Error> {
+    ) -> Result<()> {
         let current_ref = self
             .repo
             .find_branch(current, git2::BranchType::Local)?
@@ -229,32 +198,31 @@ impl App {
                 Some(_) | None => {}
             }
         }
-        rebase.finish(Some(signature))
+        Ok(rebase.finish(Some(signature))?)
     }
 
-    fn get_commit_msg_from_editor(&self) -> Result<String, SidequestError> {
+    fn get_commit_msg_from_editor(&self) -> Result<String> {
         // Get the path of the .git directory
-        let repo_path = self.repo.workdir().ok_or(SidequestError::App(String::from(
-            "Unable to find the path to the .git directory",
-        )))?;
+        let repo_path = self
+            .repo
+            .workdir()
+            .ok_or(anyhow!("Unable to find the path to the .git directory",))?;
         let buffer_path = repo_path.join(".git").join("COMMIT_EDITMSG");
 
         // Create an empty COMMIT_MSG file in the directory
         let mut file = match File::create(&buffer_path) {
-            Err(why) => Err(SidequestError::App(format!(
+            Err(why) => Err(anyhow!(
                 "Failed to create commit message buffer {}: {}",
                 buffer_path.display(),
                 why,
-            ))),
+            )),
             Ok(f) => Ok(f),
         }?;
 
         // Write the default commit message comments to the file
         file.write_all(DEFAULT_COMMIT_MESSAGE.as_bytes())
             .map_err(|why| {
-                SidequestError::App(format!(
-                    "Failed to write initial contents of the commit message: {why}"
-                ))
+                anyhow!("Failed to write initial contents of the commit message: {why}")
             })?;
 
         // Open it with the user's $EDITOR, or fallback to vi
@@ -262,21 +230,19 @@ impl App {
         match Command::new(editor.clone()).arg(&buffer_path).status() {
             Err(why) => {
                 return match why.kind() {
-                    std::io::ErrorKind::NotFound => Err(SidequestError::App(format!(
+                    std::io::ErrorKind::NotFound => Err(anyhow!(
                         "{editor} was not found in your PATH, cannot edit commit message."
-                    ))),
-                    _ => Err(SidequestError::App(format!(
-                        "Failed while writing commit message: {why}"
-                    ))),
+                    )),
+                    _ => Err(anyhow!("Failed while writing commit message: {why}")),
                 }
             }
             Ok(status) => {
                 if status.success() {
                     Ok(())
                 } else {
-                    Err(SidequestError::App(format!(
+                    Err(anyhow!(
                         "Failed while writing commit message with status code: {status}"
-                    )))
+                    ))
                 }
             }
         }?;
@@ -285,15 +251,11 @@ impl App {
         let mut message = String::new();
         let mut file = match File::open(buffer_path) {
             Ok(f) => Ok(f),
-            Err(why) => Err(SidequestError::App(format!(
-                "Unable to read back commit message : {why}"
-            ))),
+            Err(why) => Err(anyhow!("Unable to read back commit message : {why}")),
         }?;
         match file.read_to_string(&mut message) {
             Ok(_) => Ok(()),
-            Err(why) => Err(SidequestError::App(format!(
-                "Error while reading commit message : {why}"
-            ))),
+            Err(why) => Err(anyhow!("Error while reading commit message : {why}")),
         }?;
 
         // Delete lines starting with a #
@@ -305,9 +267,7 @@ impl App {
 
         // Check if at least one non-blank line remains
         if lines_without_comments.trim().is_empty() {
-            return Err(SidequestError::App(String::from(
-                "Empty commit message, aborting",
-            )));
+            return Err(anyhow!("Empty commit message, aborting",));
         }
 
         // Return its contents, or error if the file is empty
@@ -331,7 +291,7 @@ impl App {
         }
         false
     }
-    fn has_unstaged_changes(&self) -> Result<bool, git2::Error> {
+    fn has_unstaged_changes(&self) -> Result<bool> {
         Ok(self.repo.statuses(None)?.iter().any(|status| {
             status.status().intersects(
                 git2::Status::WT_DELETED
@@ -343,7 +303,7 @@ impl App {
         }))
     }
 
-    fn has_staged_changes(&self) -> Result<bool, git2::Error> {
+    fn has_staged_changes(&self) -> Result<bool> {
         Ok(self.repo.statuses(None)?.iter().any(|status| {
             status.status().intersects(
                 git2::Status::INDEX_NEW
@@ -359,7 +319,7 @@ impl App {
         self.repo.state() != git2::RepositoryState::Clean
     }
 
-    pub fn default_signature(&self) -> Result<Signature<'static>, git2::Error> {
-        self.repo.signature()
+    pub fn default_signature(&self) -> Result<Signature<'static>> {
+        Ok(self.repo.signature()?)
     }
 }
