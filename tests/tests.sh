@@ -108,3 +108,9 @@ setup() {
     assert_failure
     assert_output --partial "HEAD is not the top of a local branch"
 }
+
+@test "aborts if the target branch name is invalid" {
+    run $EXE_PATH ..sidequest-branch -m "This should not be commited"
+    assert_failure
+    assert_output --partial "Invalid branch name"
+}
