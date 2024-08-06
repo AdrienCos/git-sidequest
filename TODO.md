@@ -6,7 +6,7 @@
 - [ ] Add '-q/--quiet' option
 - [X] Use BATS for e2e testing <https://github.com/bats-core/bats-core>
 - [ ] Make the binary able to update itself on demand, by pulling from the
-    Github release
+    Github release (see <https://github.com/axodotdev/axoupdater>)
 - [ ] Configure
   [cargo-dist](https://opensource.axo.dev/cargo-dist/book/introduction.html) for
   automatic builds and installers

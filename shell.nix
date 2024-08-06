@@ -7,5 +7,6 @@ pkgs.mkShell {
   packages = with pkgs; [
     bats
     just
+    cargo-dist
   ];
 }
