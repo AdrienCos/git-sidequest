@@ -93,7 +93,7 @@ setup() {
 @test "aborts if the repo is currently in a rebase operation" {
     # Manually force a merge conflict during the rebase
     git add .
-    git commit -m "This commit creates a conflict"
+    git commit -m "This commit creates a conflict" --quiet
     run git rebase conflict-branch
     run $EXE_PATH sidequest-branch -m "This should not be commited"
     assert_failure
