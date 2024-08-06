@@ -7,10 +7,9 @@ license = "MIT"
 
 [dependencies]
 clap = { version = "4.5.8", features = ["derive"] }
-git2 = "0.19.0"
-# Avoid dynamically linking OpenSSL, increasing compatibilty at the cost of
-# build duration and binary size
-openssl = { version = "*", features = ["vendored"] }
+git2 = { version = "0.19.0", features = [
+    "ssh_key_from_memory",
+], default-features = false }
 
 # The profile that 'cargo dist' will build with
 [profile.dist]
