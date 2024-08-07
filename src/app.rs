@@ -1,5 +1,5 @@
 use anyhow::{anyhow, bail, Result};
-use git2::{Repository, Signature};
+use git2::{AnnotatedCommit, Repository, Signature};
 use std::{
     env,
     fs::File,
@@ -158,21 +158,9 @@ impl App {
         onto: &str,
         signature: &Signature,
     ) -> Result<()> {
-        let current_ref = self
-            .repo
-            .find_branch(current, git2::BranchType::Local)?
-            .into_reference();
-        let target_ref = self
-            .repo
-            .find_branch(target, git2::BranchType::Local)?
-            .into_reference();
-        let onto_ref = self
-            .repo
-            .find_branch(onto, git2::BranchType::Local)?
-            .into_reference();
-        let current_annotated_commit = self.repo.reference_to_annotated_commit(&current_ref)?;
-        let target_annotated_commit = self.repo.reference_to_annotated_commit(&target_ref)?;
-        let onto_annotated_commit = self.repo.reference_to_annotated_commit(&onto_ref)?;
+        let current_annotated_commit = self.get_annotated_commit_from_branch(current)?;
+        let target_annotated_commit = self.get_annotated_commit_from_branch(target)?;
+        let onto_annotated_commit = self.get_annotated_commit_from_branch(onto)?;
         let mut rebase = self.repo.rebase(
             Some(&current_annotated_commit),
             Some(&target_annotated_commit),
@@ -182,7 +170,7 @@ impl App {
         while let Some(op) = rebase.next() {
             match op?.kind() {
                 Some(git2::RebaseOperationType::Pick) => {
-                    rebase.commit(None, signature, None).map(|_| ())?;
+                    rebase.commit(None, signature, None)?;
                 }
                 Some(_) | None => {}
             }
@@ -190,12 +178,20 @@ impl App {
         Ok(rebase.finish(Some(signature))?)
     }
 
+    fn get_annotated_commit_from_branch(&self, branch_name: &str) -> Result<AnnotatedCommit> {
+        let onto_ref = self
+            .repo
+            .find_branch(branch_name, git2::BranchType::Local)?
+            .into_reference();
+        Ok(self.repo.reference_to_annotated_commit(&onto_ref)?)
+    }
+
     fn get_commit_msg_from_editor(&self) -> Result<String> {
         // Get the path of the .git directory
         let repo_path = self
             .repo
             .workdir()
-            .ok_or(anyhow!("Unable to find the path to the .git directory",))?;
+            .ok_or(anyhow!("Unable to find the path to the .git directory"))?;
         let buffer_path = repo_path.join(".git").join("COMMIT_EDITMSG");
 
         // Create an empty COMMIT_MSG file in the directory
