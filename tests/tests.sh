@@ -71,6 +71,14 @@ setup() {
     assert_output --partial "Sidequest successful!"
 }
 
+@test "can run from a directory inside the Git repository" {
+    mkdir nested
+    cd nested
+    run $EXE_PATH sidequest-branch -m "Commit message for onto-branch sidequest"
+    assert_success
+    assert_output --partial "Sidequest successful!"
+}
+
 @test "aborts if no changes are staged" {
     git restore --staged .
     run $EXE_PATH sidequest-branch -m "This should not be commited"
@@ -93,7 +101,7 @@ setup() {
 @test "aborts if the repo is currently in a rebase operation" {
     # Manually force a merge conflict during the rebase
     git add .
-    git commit -m "This commit creates a conflict"
+    git commit -m "This commit creates a conflict" --quiet
     run git rebase conflict-branch
     run $EXE_PATH sidequest-branch -m "This should not be commited"
     assert_failure
@@ -113,4 +121,11 @@ setup() {
     run $EXE_PATH ..sidequest-branch -m "This should not be commited"
     assert_failure
     assert_output --partial "Invalid branch name"
+}
+
+@test "aborts if the current directory is not a git repo" {
+    mv .git .not-git
+    run $EXE_PATH sidequest-branch -m "This should not be commited"
+    assert_failure
+    assert_output --partial "No valid Git repository found"
 }

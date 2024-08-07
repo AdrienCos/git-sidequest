@@ -1,7 +1,13 @@
-#![warn(clippy::all, clippy::pedantic, clippy::style)]
+#![warn(
+    clippy::all,
+    clippy::pedantic,
+    clippy::style,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic
+)]
 
-use std::process::exit;
-
+use anyhow::{bail, Context, Result};
 use clap::Parser;
 mod app;
 mod constants;
@@ -23,13 +29,13 @@ struct Args {
 }
 
 #[allow(clippy::too_many_lines)]
-fn main() {
+fn main() -> Result<()> {
     let args = Args::parse();
 
     println!("Sidequest started: {}", args.branch);
 
     // Check if we are in a git repo
-    let repo = utils::open_repository().unwrap();
+    let repo = utils::open_repository().context("No valid Git repository found")?;
 
     // Instantiate the app
     let mut app = app::App::new(repo);
@@ -38,8 +44,7 @@ fn main() {
     let signature = match app.default_signature() {
         Ok(sign) => sign,
         Err(e) => {
-            eprint!("Sidequest failed: {e}");
-            return;
+            bail!(e);
         }
     };
 
@@ -49,10 +54,10 @@ fn main() {
     match app.run(&args.branch, &args.onto, Some(&signature), message) {
         Ok(()) => {
             println!("Sidequest successful!");
+            Ok(())
         }
         Err(e) => {
-            eprintln!("Sidequest failed: {e}");
-            exit(1);
+            bail!(e);
         }
     }
 }
