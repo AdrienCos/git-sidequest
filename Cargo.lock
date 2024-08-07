@@ -130,7 +130,7 @@ dependencies = [
 
 [[package]]
 name = "git-sidequest"
-version = "0.5.3"
+version = "0.5.4"
 dependencies = [
  "anyhow",
  "clap",
