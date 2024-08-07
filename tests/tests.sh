@@ -71,6 +71,14 @@ setup() {
     assert_output --partial "Sidequest successful!"
 }
 
+@test "can run from a directory inside the Git repository" {
+    mkdir nested
+    cd nested
+    run $EXE_PATH sidequest-branch -m "Commit message for onto-branch sidequest"
+    assert_success
+    assert_output --partial "Sidequest successful!"
+}
+
 @test "aborts if no changes are staged" {
     git restore --staged .
     run $EXE_PATH sidequest-branch -m "This should not be commited"
@@ -113,4 +121,11 @@ setup() {
     run $EXE_PATH ..sidequest-branch -m "This should not be commited"
     assert_failure
     assert_output --partial "Invalid branch name"
+}
+
+@test "aborts if the current directory is not a git repo" {
+    mv .git .not-git
+    run $EXE_PATH sidequest-branch -m "This should not be commited"
+    assert_failure
+    assert_output --partial "No valid Git repository found"
 }

@@ -1,6 +1,13 @@
-#![warn(clippy::all, clippy::pedantic, clippy::style)]
+#![warn(
+    clippy::all,
+    clippy::pedantic,
+    clippy::style,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic
+)]
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use clap::Parser;
 mod app;
 mod constants;
@@ -28,7 +35,7 @@ fn main() -> Result<()> {
     println!("Sidequest started: {}", args.branch);
 
     // Check if we are in a git repo
-    let repo = utils::open_repository().unwrap();
+    let repo = utils::open_repository().context("No valid Git repository found")?;
 
     // Instantiate the app
     let mut app = app::App::new(repo);
