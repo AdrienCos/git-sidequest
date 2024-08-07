@@ -110,20 +110,9 @@ impl App {
     }
 
     fn create_branch(&self, branch: &str, target: &str) -> Result<()> {
-        let (_, reference) = self.repo.revparse_ext(target)?;
-
-        // Create target branch
-        Ok(self
-            .repo
-            .branch(
-                branch,
-                &self
-                    .repo
-                    .find_commit(reference.unwrap().target().unwrap())
-                    .unwrap(),
-                false,
-            )
-            .map(|_| ())?)
+        let target_commit = self.repo.find_reference(target)?.peel_to_commit()?;
+        self.repo.branch(branch, &target_commit, false)?;
+        Ok(())
     }
 
     fn get_current_branch_name(&self) -> Result<String> {
