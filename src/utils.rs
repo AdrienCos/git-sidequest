@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
 use git2::Repository;
+use std::env::current_dir;
 
 pub fn validate_branch_name(branch_name: &str) -> Result<String> {
     match git2::Branch::name_is_valid(branch_name) {
@@ -9,5 +10,6 @@ pub fn validate_branch_name(branch_name: &str) -> Result<String> {
 }
 
 pub fn open_repository() -> Result<Repository> {
-    Ok(Repository::discover(".")?)
+    let cur_dir = current_dir()?;
+    Ok(Repository::discover(cur_dir)?)
 }
