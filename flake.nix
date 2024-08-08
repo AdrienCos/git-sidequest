@@ -27,6 +27,7 @@
       system: {
         default = pkgsFor.${system}.callPackage ./shell.nix {
           fenix = fenix.packages.${system};
+          inputs = self.inputs;
         };
       }
     );
