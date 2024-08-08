@@ -8,14 +8,19 @@ use std::{
 };
 
 use crate::constants::DEFAULT_COMMIT_MESSAGE;
+use crate::secondary_ports::ICheckInitialState;
 
 pub struct App {
     repo: Repository,
+    initial_state_checker: Box<dyn ICheckInitialState>,
 }
 
 impl App {
-    pub fn new(repo: Repository) -> App {
-        App { repo }
+    pub fn new(repo: Repository, initial_state_checker: Box<dyn ICheckInitialState>) -> App {
+        App {
+            repo,
+            initial_state_checker,
+        }
     }
 
     pub fn run(
@@ -31,25 +36,9 @@ impl App {
             None => &self.default_signature()?,
         };
 
-        // Make sure that the repository is not in an intermediate state (rebasing, merging, etc.)
-        if self.is_mid_operation() {
-            return Err(anyhow!("An operation is already in progress",));
-        }
-
-        // Check if some changes are staged
-        if !self.has_staged_changes()? {
-            return Err(anyhow!("No staged changes found"));
-        }
-
-        // Check if the branch already exists
-        if self.branch_exists(target_branch) {
-            return Err(anyhow!("Target branch already exists",));
-        }
-
-        // Ensure the the 'onto' branch exists
-        if !self.branch_exists(onto_branch) {
-            return Err(anyhow!("Onto branch does not exist",));
-        }
+        // Check that the current state of the repo is valid
+        self.initial_state_checker
+            .check(&self.repo, target_branch, onto_branch)?;
 
         // Get name of the current branch
         let original_branch_name = self.get_current_branch_name()?;
@@ -309,23 +298,6 @@ impl App {
         Ok(lines_without_comments)
     }
 
-    fn branch_exists(&self, branch: &str) -> bool {
-        if self
-            .repo
-            .find_branch(branch, git2::BranchType::Local)
-            .is_ok()
-        {
-            return true;
-        }
-        if self
-            .repo
-            .find_branch(branch, git2::BranchType::Remote)
-            .is_ok()
-        {
-            return true;
-        }
-        false
-    }
     fn has_unstaged_changes(&self) -> Result<bool> {
         Ok(self.repo.statuses(None)?.iter().any(|status| {
             status.status().intersects(
@@ -336,22 +308,6 @@ impl App {
                     | git2::Status::WT_TYPECHANGE,
             )
         }))
-    }
-
-    fn has_staged_changes(&self) -> Result<bool> {
-        Ok(self.repo.statuses(None)?.iter().any(|status| {
-            status.status().intersects(
-                git2::Status::INDEX_NEW
-                    | git2::Status::INDEX_MODIFIED
-                    | git2::Status::INDEX_DELETED
-                    | git2::Status::INDEX_RENAMED
-                    | git2::Status::INDEX_TYPECHANGE,
-            )
-        }))
-    }
-
-    fn is_mid_operation(&self) -> bool {
-        self.repo.state() != git2::RepositoryState::Clean
     }
 
     pub fn default_signature(&self) -> Result<Signature<'static>> {

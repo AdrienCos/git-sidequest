@@ -9,8 +9,12 @@
 
 use anyhow::{bail, Context, Result};
 use clap::Parser;
+use usecases::InitialStateChecker;
+
 mod app;
 mod constants;
+mod secondary_ports;
+mod usecases;
 mod utils;
 
 #[derive(Parser, Debug)]
@@ -37,8 +41,11 @@ fn main() -> Result<()> {
     // Check if we are in a git repo
     let repo = utils::open_repository().context("No valid Git repository found")?;
 
+    // Instantiate the usecases
+    let initial_state_checker = Box::new(InitialStateChecker);
+
     // Instantiate the app
-    let mut app = app::App::new(repo);
+    let mut app = app::App::new(repo, initial_state_checker);
 
     // Get the signature that will be used for the new commit
     let signature = match app.default_signature() {
