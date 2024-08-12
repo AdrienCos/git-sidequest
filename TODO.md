@@ -14,3 +14,5 @@
   page
 - [ ] Configure [cargo-insta](https://insta.rs/docs/) for e2e tests
 - [ ] Fix the CI build of `aarch64` platforms (see <https://github.com/axodotdev/cargo-dist/issues/74>)
+- [ ] Add a `--stacked` flag that creates the branch on the root of the current branch,
+  nd then rebases the current one onto it
