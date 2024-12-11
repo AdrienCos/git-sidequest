@@ -3,10 +3,9 @@
   "extends": [
     "config:recommended"
   ],
+  "rebaseWhen": "behind-base-branch",
   "lockFileMaintenance": {
     "enabled": true,
-    "recreateWhen": "always",
-    "rebaseStalePrs": true,
     "schedule": [
       "before 4am on monday"
     ]
