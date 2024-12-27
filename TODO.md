@@ -14,3 +14,4 @@
   page
 - [ ] Configure [cargo-insta](https://insta.rs/docs/) for e2e tests
 - [ ] Fix the CI build of `aarch64` platforms (see <https://github.com/axodotdev/cargo-dist/issues/74>)
+- [ ] Use [mockall](https://docs.rs/mockall/latest/mockall/) for unit tests
