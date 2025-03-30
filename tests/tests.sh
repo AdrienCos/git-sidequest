@@ -129,3 +129,10 @@ setup() {
     assert_failure
     assert_output --partial "No valid Git repository found"
 }
+
+@test "cleanly aborts if trying to sidequest a file that introduces merge conflicts" {
+    git add file.txt
+    run $EXE_PATH sidequest-branch -m "This should not be commited"
+    assert_failure
+    assert_output --partial "Failed to rebase the sidequest branch onto the target branch, operation aborted"
+}
