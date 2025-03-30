@@ -1,5 +1,5 @@
 use anyhow::{anyhow, bail, Result};
-use git2::{AnnotatedCommit, Repository, Signature};
+use git2::{AnnotatedCommit, RebaseOptions, Repository, Signature};
 use std::{
     env,
     fs::File,
@@ -76,22 +76,60 @@ impl App {
         if unstaged_changes {
             self.stash_push(signature, "git-sidequest: unstaged changes", true)?;
         }
-        // Rebase the target branch on the master branch
-        self.rebase_branch(target_branch, &original_branch_name, onto_branch, signature)?;
 
-        // Checkout the original branch
-        self.checkout_branch(&original_branch_name)?;
+        // Rebase or rollback the target branch on the master branch
+        if self
+            .rebase_branch(target_branch, &original_branch_name, onto_branch, signature)
+            .is_ok()
+        {
+            // Checkout the original branch
+            self.checkout_branch(&original_branch_name)?;
+            // Apply the stashed unstaged changes
+            if unstaged_changes {
+                self.stash_pop()?;
+            }
+            Ok(())
+        } else {
+            self.rollback_failed_rebase(
+                original_branch_name.as_str(),
+                target_branch,
+                unstaged_changes,
+            )?;
+            Err(anyhow!(
+                "Failed to rebase the sidequest branch onto the target branch, operation aborted"
+            ))
+        }
+    }
 
-        // Apply the stashed unstaged changes
-        if unstaged_changes {
+    fn rollback_failed_rebase(
+        &mut self,
+        original_branch_name: &str,
+        target_branch: &str,
+        should_pop_stash: bool,
+    ) -> Result<()> {
+        self.reset_to_head_parent()?;
+        if should_pop_stash {
             self.stash_pop()?;
         }
+        self.checkout_branch(original_branch_name)?;
+        self.repo
+            .find_branch(target_branch, git2::BranchType::Local)?
+            .delete()?;
+        Ok(())
+    }
+
+    fn reset_to_head_parent(&self) -> Result<()> {
+        let head_ref = self.repo.find_reference("HEAD")?;
+        let head_commit = head_ref.peel_to_commit()?;
+        let target_commit = head_commit.parent(0)?.into_object();
+        self.repo
+            .reset(&target_commit, git2::ResetType::Mixed, None)?;
         Ok(())
     }
 
     fn commit_on_head(&self, signature: &Signature, msg: &str) -> Result<git2::Oid> {
         let oid = self.repo.index()?.write_tree()?;
-        let tree = self.repo.find_tree(oid)?;
+        let tree: git2::Tree<'_> = self.repo.find_tree(oid)?;
         let parent_commit = self.repo.head()?.peel_to_commit()?;
         Ok(self.repo.commit(
             Some("HEAD"),
@@ -165,7 +203,7 @@ impl App {
             Some(&current_annotated_commit),
             Some(&target_annotated_commit),
             Some(&onto_annotated_commit),
-            None,
+            Some(RebaseOptions::new().inmemory(true)),
         )?;
         while let Some(op) = rebase.next() {
             match op?.kind() {
@@ -175,7 +213,7 @@ impl App {
                 Some(_) | None => {}
             }
         }
-        Ok(rebase.finish(Some(signature))?)
+        rebase.finish(Some(signature)).map_err(|err| anyhow!(err))
     }
 
     fn get_annotated_commit_from_branch(&self, branch_name: &str) -> Result<AnnotatedCommit> {
