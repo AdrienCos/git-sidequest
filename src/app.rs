@@ -206,11 +206,8 @@ impl App {
             Some(RebaseOptions::new().inmemory(true)),
         )?;
         while let Some(op) = rebase.next() {
-            match op?.kind() {
-                Some(git2::RebaseOperationType::Pick) => {
-                    rebase.commit(None, signature, None)?;
-                }
-                Some(_) | None => {}
+            if let Some(git2::RebaseOperationType::Pick) = op?.kind() {
+                rebase.commit(None, signature, None)?;
             }
         }
         rebase.finish(Some(signature)).map_err(|err| anyhow!(err))
