@@ -79,9 +79,23 @@ impl App {
 
         // Rebase or rollback the target branch on the master branch
         if self
-            .rebase_branch(target_branch, &original_branch_name, onto_branch, signature)
+            .rebase_branch(
+                target_branch,
+                &original_branch_name,
+                onto_branch,
+                signature,
+                true,
+            )
             .is_ok()
         {
+            // Actually perform the rebase
+            self.rebase_branch(
+                target_branch,
+                &original_branch_name,
+                onto_branch,
+                signature,
+                false,
+            )?;
             // Checkout the original branch
             self.checkout_branch(&original_branch_name)?;
             // Apply the stashed unstaged changes
@@ -195,6 +209,7 @@ impl App {
         target: &str,
         onto: &str,
         signature: &Signature,
+        inmemory: bool,
     ) -> Result<()> {
         let current_annotated_commit = self.get_annotated_commit_from_branch(current)?;
         let target_annotated_commit = self.get_annotated_commit_from_branch(target)?;
@@ -203,7 +218,7 @@ impl App {
             Some(&current_annotated_commit),
             Some(&target_annotated_commit),
             Some(&onto_annotated_commit),
-            Some(RebaseOptions::new().inmemory(true)),
+            Some(RebaseOptions::new().inmemory(inmemory)),
         )?;
         while let Some(op) = rebase.next() {
             if let Some(git2::RebaseOperationType::Pick) = op?.kind() {
