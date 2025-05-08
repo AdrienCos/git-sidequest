@@ -11,6 +11,14 @@
     };
   };
 
+  nixConfig = {
+    extra-substituters = [
+      "https://git-sidequest.cachix.org"
+    ];
+    extra-trusted-public-keys = [
+      "git-sidequest.cachix.org-1:r3uqOdmYrjjkuUNTcTBaGqFPPJ9nUdt3xtlcoljMyI4="
+    ];
+  };
   outputs = {
     self,
     nixpkgs,
