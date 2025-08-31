@@ -13,11 +13,7 @@
   commonArgs = {
     src = craneLib.cleanCargoSource ./.;
     strictDeps = true;
-    buildInputs =
-      []
-      ++ lib.optionals stdenv.isDarwin [
-        pkgs.darwin.apple_sdk.frameworks.Security
-      ];
+    buildInputs = [];
     nativeBuildInputs = [
       pkgs.pkg-config
     ];
