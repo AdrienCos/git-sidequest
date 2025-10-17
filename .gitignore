@@ -4,3 +4,6 @@
 /result
 /profile
 /profile-*
+
+# MacOS files
+.DS_Store
