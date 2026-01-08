@@ -15,11 +15,6 @@ jobs:
       - uses: cachix/install-nix-action@v31
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: cachix/cachix-action@v16
-        with:
-          name: git-sidequest
-          authToken: "${{ secrets.CACHIX_TOKEN }}"
-          extraPullNames: nix-community,devenv,crane
       - run: nix flake check
 
   build:
@@ -33,9 +28,4 @@ jobs:
       - uses: cachix/install-nix-action@v31
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: cachix/cachix-action@v16
-        with:
-          name: git-sidequest
-          authToken: "${{ secrets.CACHIX_TOKEN }}"
-          extraPullNames: nix-community,devenv,crane
       - run: nix build .#
