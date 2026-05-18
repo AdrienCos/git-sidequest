@@ -8,7 +8,7 @@ license = "MIT"
 [dependencies]
 anyhow = "1.0.86"
 clap = { version = "4.5.8", features = ["derive"] }
-git2 = { version = "0.20.0", default-features = false }
+git2 = { version = "0.21.0", default-features = false }
 
 # The profile that 'cargo dist' will build with
 [profile.dist]
