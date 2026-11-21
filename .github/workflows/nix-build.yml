@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v6
-      - uses: cachix/install-nix-action@v31
+      - uses: cachix/install-nix-action@v32
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
       - run: nix flake check
@@ -25,7 +25,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6
-      - uses: cachix/install-nix-action@v31
+      - uses: cachix/install-nix-action@v32
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
       - run: nix build .#
